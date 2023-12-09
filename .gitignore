@@ -1,0 +1,4 @@
+assets/imagenet/imagenet-val/*
+!assets/imagenet/imagenet-val/.gitkeep
+assets/intel/*
+!assets/intel/.gitkeep
