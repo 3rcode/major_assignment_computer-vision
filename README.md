@@ -76,7 +76,9 @@ kaggle datasets download --unzip thieuluu/cv-data
 * Step 7: 
 ```
 python imagenet.py // if you want to see results for imagenet dataset  
-
+python intel.py --help // to see options when experiment with intel image classification dataset
+// Eg:
+python intel.py --model alexnet --seed 0 --batch 64 --learning_rate 1e-4 --epochs 30
 ```
 
 # Authors

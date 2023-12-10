@@ -1,19 +1,22 @@
 import argparse
-import copy
 import random
 import time
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.utils.data as data
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
-from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
-from torch.optim.lr_scheduler import _LRScheduler
+from sklearn.metrics import (
+    ConfusionMatrixDisplay,
+    accuracy_score,
+    f1_score,
+    precision_score,
+    recall_score,
+)
 
 from models.alexnet import AlexNet
 from models.convnext import ConvNeXt
@@ -34,6 +37,7 @@ def plot_images(images, labels, classes, normalize=False):
         ax.imshow(image.permute(1, 2, 0).cpu().numpy())
         ax.set_title(classes[labels[i]])
         ax.axis("off")
+    plt.show()
 
 
 def data_augmented(images_folder, image_size=224):
@@ -93,7 +97,7 @@ def train(model, iterator, optimizer, criterion, device):
         x = x.to(device)
         y = y.to(device)
         optimizer.zero_grad()
-        y_pred, _ = model(x)
+        y_pred = model(x)
         loss = criterion(y_pred, y)
         acc = calculate_accuracy(y_pred, y)
         loss.backward()
@@ -209,106 +213,102 @@ if __name__ == "__main__":
         type=int,
     )
 
-    # if not os.path.exists("assets"):
-    #     kaggle.api.authenticate()
-    #     kaggle.api.dataset_download
+    args = parser.parse_args()
+    MODEL = args.model
+    SEED = args.seed
+    BATCH_SIZE = args.batch_size
+    LR = args.lr
+    EPOCHS = args.epochs
+    if MODEL not in ["alexnet", "vgg19", "resnet152", "convnext"]:
+        raise ValueError("Model is not supported")
 
-    # args = parser.parse_args()
-    # MODEL = args.model
-    # SEED = args.seed
-    # BATCH_SIZE = args.batch_size
-    # LR = args.lr
-    # EPOCHS = args.epochs
-    # if MODEL not in ["alexnet", "vgg19", "resnet152", "convnext"]:
-    #     raise ValueError("Model is not supported")
+    random.seed(SEED)
+    torch.manual_seed(SEED)
+    torch.cuda.manual_seed(SEED)
+    torch.backends.cudnn.deterministic = True
 
-    # random.seed(SEED)
-    # torch.manual_seed(SEED)
-    # torch.cuda.manual_seed(SEED)
-    # torch.backends.cudnn.deterministic = True
+    if MODEL == "alexnet":
+        image_size = 227
+    else:
+        image_size = 224
 
-    # if MODEL == "alexnet":
-    #     image_size = 227
-    # else:
-    #     image_size = 224
+    transform = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            transforms.Resize((image_size, image_size)),
+        ]
+    )
+    train_data = datasets.ImageFolder(
+        "assets/intel/seg_train/seg_train",
+        transform=transform,
+    )
+    valid_data = datasets.ImageFolder(
+        "assets/intel/seg_test/seg_test",
+        transform=transform,
+    )
+    print("Drawing images")
+    # Draw some images to have overview of dataset
+    N_IMAGES = 25
+    images, labels = zip(
+        *[(image, label) for image, label in [train_data[i] for i in range(N_IMAGES)]]
+    )
+    classes = train_data.classes
+    plot_images(images, labels, classes)
 
-    # transform = transforms.Compose(
-    #     [
-    #         transforms.ToTensor(),
-    #         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    #         transforms.Resize((image_size, image_size)),
-    #     ]
-    # )
-    # train_data = datasets.ImageFolder(
-    #     "assets/intel/seg_train/seg_train",
-    #     transform=transform,
-    # )
-    # valid_data = datasets.ImageFolder(
-    #     "assets/intel/seg_test/seg_test",
-    #     transform=transform,
-    # )
+    # Use data augmented to deal with overfitting
+    train_data += data_augmented("assets/intel/seg_train/seg_train", image_size)
 
-    # # Draw some images to have overview of dataset
-    # N_IMAGES = 25
-    # images, labels = zip(
-    #     *[(image, label) for image, label in [train_data[i] for i in range(N_IMAGES)]]
-    # )
-    # classes = train_data.classes
-    # plot_images(images, labels, classes)
+    # Load data
+    train_iterator = data.DataLoader(
+        train_data, shuffle=True, batch_size=BATCH_SIZE, num_workers=2
+    )
+    valid_iterator = data.DataLoader(
+        valid_data, shuffle=True, batch_size=BATCH_SIZE, num_workers=2
+    )
 
-    # # Use data augmented to deal with overfitting
-    # train_data += data_augmented("assets/intel/seg_train/seg_train", image_size)
+    # Define model
+    OUTPUT_DIM = 6
 
-    # # Load data
-    # train_iterator = data.DataLoader(
-    #     train_data, shuffle=True, batch_size=BATCH_SIZE, num_workers=2
-    # )
-    # valid_iterator = data.DataLoader(
-    #     valid_data, shuffle=True, batch_size=BATCH_SIZE, num_workers=2
-    # )
+    match MODEL:
+        case "alexnet":
+            model = AlexNet(OUTPUT_DIM)
+        case "vgg19":
+            model = VGG19(OUTPUT_DIM)
+        case "resnet152":
+            model = ResNet152(OUTPUT_DIM)
+        case "convnext":
+            model = ConvNeXt(OUTPUT_DIM)
 
-    # OUTPUT_DIM = 6
+    model.apply(initialize_parameters)
+    optimizer = optim.Adam(model.parameters(), lr=LR)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    criterion = nn.CrossEntropyLoss()
+    model = model.to(device)
+    criterion = criterion.to(device)
+    best_valid_loss = float("inf")
 
-    # match MODEL:
-    #     case "alexnet":
-    #         model = AlexNet(OUTPUT_DIM)
-    #         break
-    #     case "vgg19":
-    #         model = VGG19(OUTPUT_DIM)
-    #         break
-    #     case "resnet152":
-    #         model = ResNet152(OUTPUT_DIM)
-    #         break
-    #     case "convnext":
-    #         model = ConvNeXt(OUTPUT_DIM)
+    print("Training model")
+    # Train model
+    for epoch in range(EPOCHS):
+        start_time = time.time()
+        train_loss, train_acc = train(
+            model, train_iterator, optimizer, criterion, device
+        )
+        valid_loss, valid_acc = evaluate(model, valid_iterator, criterion, device)
+        if valid_loss < best_valid_loss:
+            best_valid_loss = valid_loss
+            torch.save(model, "results/model.pt")
 
-    # model.apply(initialize_parameters)
-    # optimizer = optim.Adam(model.parameters(), lr=LR)
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # criterion = nn.CrossEntropyLoss()
-    # model = model.to(device)
-    # criterion = criterion.to(device)
-    # best_valid_loss = float("inf")
+        end_time = time.time()
 
-    # # Train model
-    # for epoch in range(EPOCHS):
-    #     start_time = time.time()
-    #     train_loss, train_acc = train(
-    #         model, train_iterator, optimizer, criterion, device
-    #     )
-    #     valid_loss, valid_acc = evaluate(model, valid_iterator, criterion, device)
-    #     if valid_loss < best_valid_loss:
-    #         best_valid_loss = valid_loss
-    #         torch.save(model, "model.pt")
+        epoch_mins, epoch_secs = epoch_time(start_time, end_time)
 
-    #     end_time = time.time()
+        print(f"Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s")
+        print(f"\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%")
+        print(f"\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%")
 
-    #     epoch_mins, epoch_secs = epoch_time(start_time, end_time)
-
-    #     print(f"Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s")
-    #     print(f"\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%")
-    #     print(f"\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%")
-
-    # # Assess performance
-    # model_saved = torch.load("model.pt")
-    # get_result(model_saved, valid_iterator, device)
+    print("Assessing performance")
+    # Assess performance
+    model_saved = torch.load("results/model.pt")
+    get_result(model_saved, valid_iterator, device)
