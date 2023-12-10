@@ -18,7 +18,7 @@ class Block(nn.Module):
         self.pwconv2 = nn.Linear(4 * dim, dim)
         if layer_scale_init_value > 0:
             self.gamma = nn.Parameter(
-                layer_scale_init_value * torch.ones((dim, 1, 1)), requires_grad=True
+                layer_scale_init_value * torch.ones((dim)), requires_grad=True
             )
         else:
             self.gamma = None
@@ -86,7 +86,6 @@ class ConvNeXt(nn.Module):
         # Final norm layer
         self.norm = nn.LayerNorm(dims[-1], eps=1e-6)
         self.head = nn.Linear(dims[-1], num_classes)
-        self.apply(self._init_weights)
 
     def forward_features(self, x):
         for i in range(4):

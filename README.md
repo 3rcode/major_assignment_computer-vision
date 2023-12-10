@@ -85,7 +85,7 @@ python intel.py --model alexnet --seed 0 --batch 64 --learning_rate 1e-4 --epoch
 This repository was made by Team4 consist of 4 members:  
 [Luu Van Duc Thieu](https://github.com/lvdthieu)  
 [Hoang Thai Quang](https://github.com/htwuto)  
-[Nguyen Thu Trang](https://github.com/ThuTrang513)  
+[Pham Thu Trang](https://github.com/ThuTrang513)  
 [Ho Thi Thanh Binh](https://github.com/fivontwov)  
 # License
 [MIT](https://choosealicense.com/licenses/mit/)
