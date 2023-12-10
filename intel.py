@@ -1,3 +1,4 @@
+import argparse
 import copy
 import random
 import time
@@ -14,6 +15,13 @@ import torchvision.transforms as transforms
 from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 from torch.optim.lr_scheduler import _LRScheduler
 
+from models.alexnet import AlexNet
+from models.convnext import ConvNeXt
+from models.resnet152 import ResNet152
+from models.vgg19 import VGG19
+
+parser = argparse.ArgumentParser()
+
 
 def plot_images(images, labels, classes, normalize=False):
     n_images = len(images)
@@ -28,11 +36,11 @@ def plot_images(images, labels, classes, normalize=False):
         ax.axis("off")
 
 
-def data_augmented(images_folder):
+def data_augmented(images_folder, image_size=224):
     transform_augument_1 = transforms.Compose(
         [
             transforms.ToTensor(),
-            transforms.RandomResizedCrop(size=(300, 300), antialias=True),
+            transforms.RandomResizedCrop(size=(image_size, image_size), antialias=True),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         ]
@@ -40,7 +48,7 @@ def data_augmented(images_folder):
     transform_augument_2 = transforms.Compose(
         [
             transforms.ToTensor(),
-            transforms.RandomResizedCrop(size=(300, 300), antialias=True),
+            transforms.RandomResizedCrop(size=(image_size, image_size), antialias=True),
             transforms.RandomRotation(degrees=(30, 70)),
             transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
         ]
@@ -58,6 +66,10 @@ def data_augmented(images_folder):
 
 
 def initialize_parameters(m):
+    """
+    Params m: a layer inherit torch.nn.Conv2d or torch.nn.Linear
+    """
+
     if isinstance(m, nn.Conv2d):
         nn.init.kaiming_normal_(m.weight.data, nonlinearity="relu")
         nn.init.constant_(m.bias.data, 0)
@@ -102,13 +114,9 @@ def evaluate(model, iterator, criterion, device):
         for x, y in iterator:
             x = x.to(device)
             y = y.to(device)
-
             y_pred, _ = model(x)
-
             loss = criterion(y_pred, y)
-
             acc = calculate_accuracy(y_pred, y)
-
             epoch_loss += loss.item()
             epoch_acc += acc.item()
 
@@ -134,7 +142,6 @@ def get_result(model, data, device):
         for x, y in data:
             x = x.to(device)
             y = y.to(device)
-
             y_pred, _ = model(x)
             top_pred = y_pred.argmax(1, keepdim=True)
             if predict == None:
@@ -162,88 +169,146 @@ def get_result(model, data, device):
 
 
 if __name__ == "__main__":
-    SEED = 42
-    random.seed(SEED)
-    np.random.seed(SEED)
-    torch.manual_seed(SEED)
-    torch.cuda.manual_seed(SEED)
-    torch.backends.cudnn.deterministic = True
-
-    transform = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-            transforms.Resize((300, 300)),
-        ]
+    parser.add_argument(
+        "-m",
+        "--model",
+        dest="model",
+        default="alexnet",
+        help='Model to experiment (the model must be in ["alexnet", "vgg19", "resnet152", "convnext"])',
+    )
+    parser.add_argument(
+        "-s",
+        "--seed",
+        dest="seed",
+        default=42,
+        help="Set seed to have reproduce ability",
+        type=int,
+    )
+    parser.add_argument(
+        "-bs",
+        "--batch",
+        dest="batch_size",
+        default=64,
+        help="Batch size to train model",
+        type=int,
+    )
+    parser.add_argument(
+        "-lr",
+        "--learning_rate",
+        dest="lr",
+        default=1e-4,
+        help="Learning rate to train model",
+        type=float,
+    )
+    parser.add_argument(
+        "-ep",
+        "--epochs",
+        dest="epochs",
+        default=30,
+        help="Number of epochs to train model",
+        type=int,
     )
 
-    train_data = datasets.ImageFolder(
-        "assets/itel/seg_train/seg_train",
-        transform=transform,
-    )
-    valid_data = datasets.ImageFolder(
-        "assets/itel/seg_test/seg_test",
-        transform=transform,
-    )
-    N_IMAGES = 25
+    # if not os.path.exists("assets"):
+    #     kaggle.api.authenticate()
+    #     kaggle.api.dataset_download
 
-    images, labels = zip(
-        *[(image, label) for image, label in [train_data[i] for i in range(N_IMAGES)]]
-    )
+    # args = parser.parse_args()
+    # MODEL = args.model
+    # SEED = args.seed
+    # BATCH_SIZE = args.batch_size
+    # LR = args.lr
+    # EPOCHS = args.epochs
+    # if MODEL not in ["alexnet", "vgg19", "resnet152", "convnext"]:
+    #     raise ValueError("Model is not supported")
 
-    classes = train_data.classes
+    # random.seed(SEED)
+    # torch.manual_seed(SEED)
+    # torch.cuda.manual_seed(SEED)
+    # torch.backends.cudnn.deterministic = True
 
-    plot_images(images, labels, classes, True)
+    # if MODEL == "alexnet":
+    #     image_size = 227
+    # else:
+    #     image_size = 224
 
-    train_data += data_augmented("assets/itel/seg_train/seg_train")
+    # transform = transforms.Compose(
+    #     [
+    #         transforms.ToTensor(),
+    #         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    #         transforms.Resize((image_size, image_size)),
+    #     ]
+    # )
+    # train_data = datasets.ImageFolder(
+    #     "assets/intel/seg_train/seg_train",
+    #     transform=transform,
+    # )
+    # valid_data = datasets.ImageFolder(
+    #     "assets/intel/seg_test/seg_test",
+    #     transform=transform,
+    # )
 
-    BATCH_SIZE = 100
+    # # Draw some images to have overview of dataset
+    # N_IMAGES = 25
+    # images, labels = zip(
+    #     *[(image, label) for image, label in [train_data[i] for i in range(N_IMAGES)]]
+    # )
+    # classes = train_data.classes
+    # plot_images(images, labels, classes)
 
-    train_iterator = data.DataLoader(
-        train_data, shuffle=True, batch_size=BATCH_SIZE, num_workers=2
-    )
+    # # Use data augmented to deal with overfitting
+    # train_data += data_augmented("assets/intel/seg_train/seg_train", image_size)
 
-    valid_iterator = data.DataLoader(
-        valid_data, shuffle=True, batch_size=BATCH_SIZE, num_workers=2
-    )
+    # # Load data
+    # train_iterator = data.DataLoader(
+    #     train_data, shuffle=True, batch_size=BATCH_SIZE, num_workers=2
+    # )
+    # valid_iterator = data.DataLoader(
+    #     valid_data, shuffle=True, batch_size=BATCH_SIZE, num_workers=2
+    # )
 
-    OUTPUT_DIM = 6
+    # OUTPUT_DIM = 6
 
-    model = AlexNet(OUTPUT_DIM)
-    model.apply(initialize_parameters)
-    FOUND_LR = 1e-4
-    optimizer = optim.Adam(model.parameters(), lr=FOUND_LR)
+    # match MODEL:
+    #     case "alexnet":
+    #         model = AlexNet(OUTPUT_DIM)
+    #         break
+    #     case "vgg19":
+    #         model = VGG19(OUTPUT_DIM)
+    #         break
+    #     case "resnet152":
+    #         model = ResNet152(OUTPUT_DIM)
+    #         break
+    #     case "convnext":
+    #         model = ConvNeXt(OUTPUT_DIM)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # model.apply(initialize_parameters)
+    # optimizer = optim.Adam(model.parameters(), lr=LR)
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # criterion = nn.CrossEntropyLoss()
+    # model = model.to(device)
+    # criterion = criterion.to(device)
+    # best_valid_loss = float("inf")
 
-    criterion = nn.CrossEntropyLoss()
+    # # Train model
+    # for epoch in range(EPOCHS):
+    #     start_time = time.time()
+    #     train_loss, train_acc = train(
+    #         model, train_iterator, optimizer, criterion, device
+    #     )
+    #     valid_loss, valid_acc = evaluate(model, valid_iterator, criterion, device)
+    #     if valid_loss < best_valid_loss:
+    #         best_valid_loss = valid_loss
+    #         torch.save(model, "model.pt")
 
-    model = model.to(device)
-    criterion = criterion.to(device)
+    #     end_time = time.time()
 
-    EPOCHS = 30
+    #     epoch_mins, epoch_secs = epoch_time(start_time, end_time)
 
-    best_valid_loss = float("inf")
+    #     print(f"Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s")
+    #     print(f"\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%")
+    #     print(f"\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%")
 
-    for epoch in range(EPOCHS):
-        start_time = time.time()
-
-        train_loss, train_acc = train(
-            model, train_iterator, optimizer, criterion, device
-        )
-        valid_loss, valid_acc = evaluate(model, valid_iterator, criterion, device)
-
-        if valid_loss < best_valid_loss:
-            best_valid_loss = valid_loss
-            torch.save(model, "tut3-model.pt")
-
-        end_time = time.time()
-
-        epoch_mins, epoch_secs = epoch_time(start_time, end_time)
-
-        print(f"Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s")
-        print(f"\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%")
-        print(f"\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%")
-
-    model_saved = torch.load("tut3-model.pt")
-    get_result(model_saved, valid_iterator, device)
+    # # Assess performance
+    # model_saved = torch.load("model.pt")
+    # get_result(model_saved, valid_iterator, device)

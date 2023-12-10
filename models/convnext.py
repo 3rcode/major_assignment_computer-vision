@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from timm.models.layers import trunc_normal_, DropPath
+from timm.models.layers import DropPath, trunc_normal_
 
-class ConvNeXtBlock(nn.Module):
+
+class Block(nn.Module):
     def __init__(self, dim, drop_path=0.0, layer_scale_init_value=1e-6):
         super().__init__()
         # Depwise convolutional layer
@@ -42,19 +43,16 @@ class ConvNeXtBlock(nn.Module):
 class ConvNeXt(nn.Module):
     def __init__(
         self,
-        in_chans=3,
         num_classes=1000,
+        in_chans=3,
         depths=[3, 3, 9, 3],
         dims=[96, 192, 384, 768],
         drop_path_rate=0.0,
         layer_scale_init_value=1e-6,
-        head_init_scale=1.0,
     ):
         super().__init__()
         # Stem and 3 intermediate downsampling convolutional layers
-        self.downsample_layers = (
-            nn.ModuleList()
-        ) 
+        self.downsample_layers = nn.ModuleList()
         stem = nn.Sequential(
             nn.Conv2d(in_chans, dims[0], kernel_size=4, stride=4),
             LayerNorm(dims[0], eps=1e-6, data_format="channels_first"),
@@ -68,9 +66,7 @@ class ConvNeXt(nn.Module):
             self.downsample_layers.append(downsample_layer)
 
         # 4 feature resolution stages, each consisting of multiple residual blocks
-        self.stages = (
-            nn.ModuleList()
-        )  
+        self.stages = nn.ModuleList()
         dp_rates = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]
         cur = 0
         for i in range(4):
@@ -90,15 +86,7 @@ class ConvNeXt(nn.Module):
         # Final norm layer
         self.norm = nn.LayerNorm(dims[-1], eps=1e-6)
         self.head = nn.Linear(dims[-1], num_classes)
-
         self.apply(self._init_weights)
-        self.head.weight.data.mul_(head_init_scale)
-        self.head.bias.data.mul_(head_init_scale)
-
-    def _init_weights(self, m):
-        if isinstance(m, (nn.Conv2d, nn.Linear)):
-            trunc_normal_(m.weight, std=0.02)
-            nn.init.constant_(m.bias, 0)
 
     def forward_features(self, x):
         for i in range(4):

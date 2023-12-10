@@ -42,8 +42,11 @@ class IMG_Dataset(Dataset):
 
 
 def smap(prediction_string, mapping):
+    """Mapping from prediction string (ground truth) in imagenet dataset to index of label that widely use in general"""
+
     key = prediction_string.split(" ")[0]
     idx = mapping[key]
+
     return idx
 
 
@@ -175,7 +178,7 @@ if __name__ == "__main__":
     if not os.path.exists("results/vgg_result.csv"):
         get_prediction(vgg_model, vgg_data, "results/vgg_result.csv")
 
-    # Access result
+    # Assess result
     ground_truth = val_dataset[["ImageName", "PredictionCategories"]]
     access_result("results/alexnet_result.csv")
     access_result("results/convnext_result.csv")
