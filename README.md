@@ -86,7 +86,7 @@ This repository was made by Team4 consist of 4 members:
 [Luu Van Duc Thieu](https://github.com/lvdthieu)  
 [Hoang Thai Quang](https://github.com/htwuto)  
 [Nguyen Thu Trang](https://github.com/ThuTrang513)  
-[Ho Thi Thanh Binh]()  
+[Ho Thi Thanh Binh](https://github.com/fivontwov)  
 # License
 [MIT](https://choosealicense.com/licenses/mit/)
 
