@@ -4,3 +4,4 @@ assets/intel/*
 !assets/intel/.gitkeep
 assets
 models/__pycache__/
+results

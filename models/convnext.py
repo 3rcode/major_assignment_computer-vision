@@ -30,7 +30,7 @@ class Block(nn.Module):
         self.pwconv2 = nn.Linear(4 * dim, dim)
         if layer_scale_init_value > 0:
             self.gamma = nn.Parameter(
-                layer_scale_init_value * torch.ones((dim, 1, 1)), requires_grad=True
+                layer_scale_init_value * torch.ones((dim)), requires_grad=True
             )
         else:
             self.gamma = None

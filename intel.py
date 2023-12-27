@@ -182,7 +182,7 @@ def evaluate(model, iterator, criterion, device):
         for x, y in iterator:
             x = x.to(device)
             y = y.to(device)
-            y_pred, _ = model(x)
+            y_pred = model(x)
             loss = criterion(y_pred, y)
             acc = calculate_accuracy(y_pred, y)
             epoch_loss += loss.item()
@@ -213,7 +213,7 @@ def get_result(model, data, device):
         for x, y in data:
             x = x.to(device)
             y = y.to(device)
-            y_pred, _ = model(x)
+            y_pred = model(x)
             top_pred = y_pred.argmax(1, keepdim=True)
             if predict == None:
                 predict = top_pred
@@ -376,4 +376,4 @@ if __name__ == "__main__":
     print("Assessing performance")
     # Assess performance
     model_saved = torch.load("results/model.pt")
-    get_result(model_saved, valid_iterator, device)
+    print(get_result(model_saved, valid_iterator, device))

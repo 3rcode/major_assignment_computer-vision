@@ -81,10 +81,9 @@ class ResNet152(nn.Module):
 
         super().__init__()
         self.in_channels = 64
-        self.conv1 = nn.Conv2d(
-            num_channels, 64, kernel_size=7, stride=2, padding=3, bias=False
-        )
-        self.batch_norm1 = nn.BatchNorm2d(64)
+        self.conv = nn.Conv2d(num_channels, 64, kernel_size=7, stride=2, padding=3)
+
+        self.batch_norm = nn.BatchNorm2d(64)
         self.relu = nn.ReLU()
         self.max_pool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
@@ -106,7 +105,7 @@ class ResNet152(nn.Module):
             A output tensor.
         """
 
-        x = self.relu(self.batch_norm1(self.conv1(x)))
+        x = self.relu(self.batch_norm(self.conv1(x)))
         x = self.max_pool(x)
 
         x = self.layer1(x)
