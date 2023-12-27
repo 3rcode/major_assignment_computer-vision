@@ -1,3 +1,4 @@
+""" ConvNeXt model """
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -5,7 +6,17 @@ from timm.models.layers import DropPath, trunc_normal_
 
 
 class Block(nn.Module):
+    """Block class"""
+
     def __init__(self, dim, drop_path=0.0, layer_scale_init_value=1e-6):
+        """Contructor of class
+
+        Args:
+            dim (int): Number of input channels.
+            drop_path (float): Stochastic drop path rate. Default 0.0.
+            layer_scale_init_value (float): Init value for Layer Scale. Default 1e-6.
+        """
+
         super().__init__()
         # Depwise convolutional layer
         self.dwconv = nn.Conv2d(
@@ -25,6 +36,14 @@ class Block(nn.Module):
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
 
     def forward(self, x):
+        """Forward funtion
+
+        Args:
+            x (torch.Tensor): input tensor.
+        Returns:
+            A output tensor.
+        """
+
         identity = x.clone()
         x = self.dwconv(x)
         x = x.permute(0, 2, 3, 1)  # (N, C, H, W) -> (N, H, W, C)
@@ -41,6 +60,8 @@ class Block(nn.Module):
 
 
 class ConvNeXt(nn.Module):
+    """ConvNeXt class"""
+
     def __init__(
         self,
         num_classes=1000,
@@ -50,6 +71,17 @@ class ConvNeXt(nn.Module):
         drop_path_rate=0.0,
         layer_scale_init_value=1e-6,
     ):
+        """Constructor of the class
+
+        Args:
+            num_classes (int): Number of classes for classification head. Default: 1000.
+            in_chans (int): Number of input image channels. Default: 3.
+            depths (tuple(int)): Number of blocks at each stage. Default: [3, 3, 9, 3].
+            dims (tuple(int)): Feature dimension at each stage. Default: [96, 192, 384, 768].
+            drop_path_rate (float): Stochastic drop path rate. Default: 0.
+            layer_scale_init_value (float): Init value for Layer Scale. Default: 1e-6.
+        """
+
         super().__init__()
         # Stem and 3 intermediate downsampling convolutional layers
         self.downsample_layers = nn.ModuleList()
@@ -86,24 +118,39 @@ class ConvNeXt(nn.Module):
         # Final norm layer
         self.norm = nn.LayerNorm(dims[-1], eps=1e-6)
         self.head = nn.Linear(dims[-1], num_classes)
-        self.apply(self._init_weights)
 
-    def forward_features(self, x):
+    def forward(self, x):
+        """Forward function
+
+        Args:
+            x (torch.Tensor): Input tensor
+        Returns:
+            A output tensor.
+        """
+
         for i in range(4):
             x = self.downsample_layers[i](x)
             x = self.stages[i](x)
-        return self.norm(
+        x = self.norm(
             x.mean([-2, -1])
         )  # Global average pooling, (N, C, H, W) -> (N, C)
-
-    def forward(self, x):
-        x = self.forward_features(x)
         x = self.head(x)
+
         return x
 
 
 class LayerNorm(nn.Module):
+    """LayerNorm class"""
+
     def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
+        """Constructor of the class
+        
+        Args:
+            normalized_shape (tuple(int, int)): input shape from expected input of size.
+            eps (float): a value added to the denominator for numerical stability. Default: 1e-6.
+            data_format: one of two options [channels_last, channel_first], describe how normalized tensor construct
+        """
+
         super().__init__()
         self.weight = nn.Parameter(torch.ones(normalized_shape))
         self.bias = nn.Parameter(torch.zeros(normalized_shape))
@@ -114,6 +161,15 @@ class LayerNorm(nn.Module):
         self.normalized_shape = (normalized_shape,)
 
     def forward(self, x):
+        """Forward function
+        
+        Args: 
+            x (torch.Tensor): input tensor
+        
+        Returns:
+            A normalized tensor.
+        """
+
         if self.data_format == "channels_last":
             return F.layer_norm(
                 x, self.normalized_shape, self.weight, self.bias, self.eps

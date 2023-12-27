@@ -27,6 +27,11 @@ parser = argparse.ArgumentParser()
 
 
 def plot_images(images, labels, classes, normalize=False):
+    """ Draw images
+    
+    Args:
+        images: 
+    """
     n_images = len(images)
     rows = int(np.sqrt(n_images))
     cols = int(np.sqrt(n_images))

@@ -1,10 +1,22 @@
+""" Resnet model """
 import torch.nn as nn
 
 
 class Block(nn.Module):
+    """Block class"""
+
     expansion = 4
 
     def __init__(self, in_channels, out_channels, i_downsample=None, stride=1):
+        """Constructor of the class
+
+        Args:
+            in_channels (int): Number of input image channel.
+            out_channels (int): Number of classes for classification head.
+            i_downsample (nn.Sequential, optional): a group of layers. Default: None.
+            stride (int): the jump necessary to go from one element to the next one. Default: 1.
+        """
+
         super().__init__()
 
         self.conv1 = nn.Conv2d(
@@ -31,6 +43,14 @@ class Block(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
+        """Forward function
+
+        Args:
+            x (torch.Tensor): input tensor
+
+        Returns:
+            A output tensor.
+        """
         identity = x.clone()
         x = self.relu(self.batch_norm1(self.conv1(x)))
         x = self.relu(self.batch_norm2(self.conv2(x)))
@@ -47,7 +67,17 @@ class Block(nn.Module):
 
 
 class ResNet152(nn.Module):
+    """Resnet class"""
+
     def __init__(self, num_classes=1000, num_channels=3, layer_list=[3, 8, 36, 3]):
+        """Constructor of the class
+
+        Args:
+            num_classes (int): Number of classes for classification head. Defaut: 1000.
+            num_channels (int): Number of input image channels. Default: 3.
+            layer_list (tuple(int)): Number of blocks at each stage. Default: [3, 8, 36, 3].
+        """
+
         super().__init__()
         self.in_channels = 64
         self.conv1 = nn.Conv2d(
@@ -66,6 +96,15 @@ class ResNet152(nn.Module):
         self.fc = nn.Linear(512 * Block.expansion, num_classes)
 
     def forward(self, x):
+        """Forward function
+
+        Args:
+            x (torch.Tensor): input tensor.
+
+        Returns:
+            A output tensor.
+        """
+
         x = self.relu(self.batch_norm1(self.conv1(x)))
         x = self.max_pool(x)
 
@@ -81,6 +120,16 @@ class ResNet152(nn.Module):
         return x
 
     def _make_layer(self, blocks, planes, stride=1):
+        """Make layer function
+
+        Args:
+            blocks (int): number of blocks in a stage.
+            planes (int): the number of input feature maps.
+            stride (int): the jump necessary to go from one element to the next one. Default: 1.
+        Returns:
+            A group of layers (in a stage)
+        """
+
         ii_downsample = None
         layers = []
 
@@ -100,7 +149,7 @@ class ResNet152(nn.Module):
         )
         self.in_channels = planes * Block.expansion
 
-        for _ in range(blocks - 1):
+        for _ in range(1, blocks):
             layers.append(Block(self.in_channels, planes))
 
         return nn.Sequential(*layers)

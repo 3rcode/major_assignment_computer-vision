@@ -1,8 +1,17 @@
+""" VGG model """
 import torch.nn as nn
 
 
 class VGG19(nn.Module):
+    """VGG class"""
+
     def __init__(self, num_classes=6):
+        """Constructor of the class
+
+        Args:
+            num_classes (int): Number of classes for classification head. Defaut: 6.
+        """
+
         super().__init__()
         self.layer1 = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
@@ -102,6 +111,15 @@ class VGG19(nn.Module):
         self.fc3 = nn.Sequential(nn.Linear(4096, num_classes))
 
     def forward(self, x):
+        """Forward function
+
+        Args:
+            x (torch.Tensor): input tensor.
+
+        Returns:
+            A output tensor.
+        """
+
         out = self.layer1(x)
         out = self.layer2(out)
         out = self.layer3(out)
