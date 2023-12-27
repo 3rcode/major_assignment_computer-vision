@@ -1,5 +1,5 @@
 # Introduction
-This repository contains our some image classification model implementations (AlexNet, VGG19, ResNet152, Convnext), report, experiment results and our insights about performance of these models for the mid-term project of INT3412E 20 in VNU-UET.
+This repository contains our some image classification model implementations (AlexNet, VGG19, ResNet152, Convnext), [report](Report.pdf) about performance of these models for the mid-term project of INT3412E 20 in VNU-UET.
 # Description
 We do experiments base on 2 datasets [ImageNet Object Localization Challenge](https://www.kaggle.com/competitions/imagenet-object-localization-challenge/data) and [Intel Image Classification](https://www.kaggle.com/datasets/puneet6060/intel-image-classification).  
 * With ImageNet dataset, because of limitation about hardware and time, we can't train models that we have implemented with train data of this dataset so that we have used Pytorch pretrained models to predict class of images in validation data (which includes 50k images of 1000 classes (labels)). 

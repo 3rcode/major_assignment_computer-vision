@@ -1,4 +1,5 @@
 """ Resnet model """
+""" Reference: https://blog.paperspace.com/writing-resnet-from-scratch-in-pytorch/"""
 import torch.nn as nn
 
 

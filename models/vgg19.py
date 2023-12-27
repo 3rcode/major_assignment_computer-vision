@@ -1,4 +1,5 @@
 """ VGG model """
+""" Reference: https://blog.paperspace.com/vgg-from-scratch-pytorch/"""
 import torch.nn as nn
 
 

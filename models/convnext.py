@@ -1,4 +1,5 @@
 """ ConvNeXt model """
+""" Reference: https://github.com/facebookresearch/ConvNeXt/blob/main/models/convnext.py"""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -144,7 +145,7 @@ class LayerNorm(nn.Module):
 
     def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
         """Constructor of the class
-        
+
         Args:
             normalized_shape (tuple(int, int)): input shape from expected input of size.
             eps (float): a value added to the denominator for numerical stability. Default: 1e-6.
@@ -162,10 +163,10 @@ class LayerNorm(nn.Module):
 
     def forward(self, x):
         """Forward function
-        
-        Args: 
+
+        Args:
             x (torch.Tensor): input tensor
-        
+
         Returns:
             A normalized tensor.
         """

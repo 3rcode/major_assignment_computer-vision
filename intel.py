@@ -18,6 +18,15 @@ from sklearn.metrics import (
     recall_score,
 )
 
+from config import (
+    ALEXNET_IMG_SIZE,
+    FIG_SIZE,
+    IMG_SIZE,
+    N_IMAGES,
+    NORMALIZE_MEAN,
+    NORMALIZE_STD,
+    OUTPUT_DIM,
+)
 from models.alexnet import AlexNet
 from models.convnext import ConvNeXt
 from models.resnet152 import ResNet152
@@ -26,16 +35,19 @@ from models.vgg19 import VGG19
 parser = argparse.ArgumentParser()
 
 
-def plot_images(images, labels, classes, normalize=False):
-    """ Draw images
-    
+def plot_images(images, labels, classes):
+    """Draw images
+
     Args:
-        images: 
+        images (list(torch.Tensor)): List of image want to show.
+        labels: (list(str)): List of label according to images.
+        classes: (list(str)): A list store name of image classes.
     """
+
     n_images = len(images)
     rows = int(np.sqrt(n_images))
     cols = int(np.sqrt(n_images))
-    fig = plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=(FIG_SIZE, FIG_SIZE))
     for i in range(rows * cols):
         ax = fig.add_subplot(rows, cols, i + 1)
         image = images[i]
@@ -46,12 +58,22 @@ def plot_images(images, labels, classes, normalize=False):
 
 
 def data_augmented(images_folder, image_size=224):
+    """Data augmented function
+
+    Args:
+        images_folder (str): URL of source images folder.
+        image_size (int): Expected size of augmented images. Default: 224.
+
+    Returns:
+        Augmented images from source images.
+    """
+
     transform_augument_1 = transforms.Compose(
         [
             transforms.ToTensor(),
             transforms.RandomResizedCrop(size=(image_size, image_size), antialias=True),
             transforms.RandomHorizontalFlip(p=0.5),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            transforms.Normalize(mean=NORMALIZE_MEAN, std=NORMALIZE_STD),
         ]
     )
     transform_augument_2 = transforms.Compose(
@@ -59,7 +81,7 @@ def data_augmented(images_folder, image_size=224):
             transforms.ToTensor(),
             transforms.RandomResizedCrop(size=(image_size, image_size), antialias=True),
             transforms.RandomRotation(degrees=(30, 70)),
-            transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+            transforms.Normalize(mean=NORMALIZE_MEAN, std=NORMALIZE_STD),
         ]
     )
     data_augument_1 = datasets.ImageFolder(
@@ -76,7 +98,8 @@ def data_augmented(images_folder, image_size=224):
 
 def initialize_parameters(m):
     """
-    Params m: a layer inherit torch.nn.Conv2d or torch.nn.Linear
+    Args:
+        m (torch.nn.Conv2d, torch.nn.Linear): a layer.
     """
 
     if isinstance(m, nn.Conv2d):
@@ -88,6 +111,15 @@ def initialize_parameters(m):
 
 
 def calculate_accuracy(y_pred, y):
+    """Calculate accuracy function
+
+    Args:
+        y_pred: Image label predictions of model.
+        y: Actual image labels.
+    Returns:
+        Accuracy score of model.
+    """
+
     top_pred = y_pred.argmax(1, keepdim=True)
     correct = top_pred.eq(y.view_as(top_pred)).sum()
     acc = correct.float() / y.shape[0]
@@ -95,6 +127,20 @@ def calculate_accuracy(y_pred, y):
 
 
 def train(model, iterator, optimizer, criterion, device):
+    """Train function
+
+    Args:
+        model (model): Model to train.
+        iterator (DataLoader): Iterable object of input images.
+        optimizer (torch.optim): Optimizer .
+        criterion: Loss function (See here: https://pytorch.org/docs/stable/nn.html#loss-functions).
+        device (torch.device): Device to train model.
+
+    Returns:
+        Average epoch loss.
+        Average epoch accuracy.
+    """
+
     epoch_loss = 0
     epoch_acc = 0
     model.train()
@@ -114,6 +160,19 @@ def train(model, iterator, optimizer, criterion, device):
 
 
 def evaluate(model, iterator, criterion, device):
+    """Evaluate function
+
+    Args:
+        model (model): Model to evaluate
+        iterator (DataLoader): Iterable object of input images
+        criterion: Loss function (See here: https://pytorch.org/docs/stable/nn.html#loss-functions).
+        device (torch.device): Device to train model.
+
+    Returns:
+        Average epoch loss.
+        Average epoch accuracy.
+    """
+
     epoch_loss = 0
     epoch_acc = 0
 
@@ -132,21 +191,24 @@ def evaluate(model, iterator, criterion, device):
     return epoch_loss / len(iterator), epoch_acc / len(iterator)
 
 
-def epoch_time(start_time, end_time):
-    elapsed_time = end_time - start_time
-    elapsed_mins = int(elapsed_time / 60)
-    elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
-    return elapsed_mins, elapsed_secs
-
-
 def get_result(model, data, device):
+    """Calculate performance of model
+
+    Args:
+        model: Model to assess.
+        data (DataLoader): Iterable object of testing data (images).
+        device (torch.device): Device to calculate prediction of model.
+
+    Returns:
+        Performance of model to testing dataset in metrics:
+            - precision macro
+            - recall macro
+            - f1 macro
+            - accuracy
+    """
+
     predict = None
     gold = None
-    epoch_loss = 0
-    epoch_acc = 0
-
-    model.eval()
-
     with torch.no_grad():
         for x, y in data:
             x = x.to(device)
@@ -233,14 +295,14 @@ if __name__ == "__main__":
     torch.backends.cudnn.deterministic = True
 
     if MODEL == "alexnet":
-        image_size = 227
+        image_size = ALEXNET_IMG_SIZE
     else:
-        image_size = 224
+        image_size = IMG_SIZE
 
     transform = transforms.Compose(
         [
             transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            transforms.Normalize(mean=NORMALIZE_MEAN, std=NORMALIZE_STD),
             transforms.Resize((image_size, image_size)),
         ]
     )
@@ -254,7 +316,7 @@ if __name__ == "__main__":
     )
     print("Drawing images")
     # Draw some images to have overview of dataset
-    N_IMAGES = 25
+
     images, labels = zip(
         *[(image, label) for image, label in [train_data[i] for i in range(N_IMAGES)]]
     )
@@ -271,9 +333,6 @@ if __name__ == "__main__":
     valid_iterator = data.DataLoader(
         valid_data, shuffle=True, batch_size=BATCH_SIZE, num_workers=2
     )
-
-    # Define model
-    OUTPUT_DIM = 6
 
     match MODEL:
         case "alexnet":
@@ -306,8 +365,9 @@ if __name__ == "__main__":
             torch.save(model, "results/model.pt")
 
         end_time = time.time()
-
-        epoch_mins, epoch_secs = epoch_time(start_time, end_time)
+        elapsed_time = end_time - start_time
+        epoch_mins = int(elapsed_time / 60)
+        epoch_secs = int(elapsed_time - (epoch_mins * 60))
 
         print(f"Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s")
         print(f"\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%")
