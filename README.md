@@ -52,28 +52,24 @@ You can easily reproduce our results by doing following steps:
 mkdir ~/.kaggle
 cd ~/Downloads
 mv kaggle.json ~/.kaggle
-chmod 600 ~/.kaggle/kaggle.json
+chmod 600 ~/.kaggle/kaggle.json // if you use linux
 ```
-* Step 4: Clone our repository to your folder:
-```
-cd <folder-path>
-git clone https://github.com/lvdthieu/Computer_Vision.git
-```
-* Step 5: Clone our repository:
+* Step 4: Clone our repository and create environment:
 ```
 // (Optional) Create a new conda environment
 conda create -n cv python=3.11
 conda activate cv
 
 // Clone and install the necessary packages
+cd <folder-path>
 git clone https://github.com/lvdthieu/Computer_Vision.git
 pip install -r requirements.txt
 ```
-* Step 6: Download dataset:
+* Step 5: Download dataset:
 ```
 kaggle datasets download --unzip thieuluu/cv-data
 ```
-* Step 7: 
+* Step 6: 
 ```
 python imagenet.py // if you want to see results for imagenet dataset  
 python intel.py --help // to see options when experiment with intel image classification dataset
